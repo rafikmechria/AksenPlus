@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:security="http://www.springframework.org/schema/security"
+       xmlns:webflow-config="http://www.springframework.org/schema/webflow-config"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/security
+        http://www.springframework.org/schema/security/spring-security-3.2.xsd
+        http://www.springframework.org/schema/webflow-config
+        http://www.springframework.org/schema/webflow-config/spring-webflow-config.xsd">
+
+
+
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" >
+        <property name="driverClassName" value="com.mysql.jdbc.Driver" />
+        <property name="url" value="jdbc:mysql://localhost:3306/testdb" />
+
+        <property name="username" value="root" />
+        <property name="password" value="" />
+
+
+    </bean>
+
+    <bean id="SessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource" />
+        <property name="hibernateProperties">
+            <props>
+                <prop key="hibernate.hbm2ddl.auto">update</prop>
+                <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+                <prop key="hibernate.current_session_context_class">thread</prop>
+                <prop key="hibernate.connection.autocommit">true</prop>
+                <prop key="hibernate.show_sql">true</prop>
+                <prop key="hibernate.format_sql">true</prop>
+                <prop key="hibernate.connection.CharSet">utf8</prop>
+                <prop key="hibernate.connection.characterEncoding">utf8</prop>
+                <prop key="hibernate.connection.useUnicode">true</prop>
+
+            </props>
+        </property>
+
+        <property name="packagesToScan">
+            <list>
+            <value>com.aksenplus.dao</value>
+                <value>com.aksenplus.controller</value>
+                <value>com.aksenplus</value>
+                <value>com.aksenplus.model</value>
+        </list>
+        </property>
+    </bean>
+
+<bean id="transactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+    <property name="sessionFactory" ref="SessionFactory"/>
+</bean>
+
+
+
+
+    <security:http auto-config="true" use-expressions="true"  >
+        <security:intercept-url pattern="/admin/login" access="permitAll"  />
+        <security:intercept-url pattern="/admin/**" access="hasRole('ROLE_ADMIN')" />
+
+        <security:form-login
+            login-page="/admin/login"
+            default-target-url="/admin/home"
+            authentication-failure-url="/admin/login?error"
+            username-parameter="username"
+            password-parameter="password"/>
+        <security:logout
+            logout-success-url="/admin/login?logout"/>
+        <security:access-denied-handler error-page="/403" />
+
+    </security:http>
+
+
+    <security:authentication-manager>
+        <security:authentication-provider>
+            <security:jdbc-user-service data-source-ref="dataSource"
+                                        authorities-by-username-query="SELECT username ,authority FROM user_authorities WHERE username=?"
+                                        users-by-username-query="SELECT username,password,enabled FROM users WHERE username=?"
+                                        />
+        </security:authentication-provider>
+    </security:authentication-manager>
+
+
+
+
+    <webflow-config:flow-executor id="flowExecutor" flow-registry="flowRegistry" />
+    <webflow-config:flow-registry id="flowRegistry" base-path="WEB-INF/flows">
+        <webflow-config:flow-location path="/checkout/checkout-flow.xml" id="checkout"/>
+
+    </webflow-config:flow-registry>
+
+    <bean id="flowHandlerMapping"  class="org.springframework.webflow.mvc.servlet.FlowHandlerMapping">
+<property name="flowRegistry" ref="flowRegistry"/>
+
+    </bean>
+    <bean id="flowHandlerAdapter"  class="org.springframework.webflow.mvc.servlet.FlowHandlerAdapter">
+        <property name="flowExecutor" ref="flowExecutor"/>
+
+    </bean>
+
+</beans>
